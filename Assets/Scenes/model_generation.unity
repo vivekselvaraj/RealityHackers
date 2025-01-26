@@ -191,7 +191,7 @@ MonoBehaviour:
     defaultMagFilterMode: 9729
     anisotropicFilterLevel: 1
   url: https://tencent-hunyuan3d-2.hf.space/static/e015ae8582de46eb832a33fbcbdfce87/textured_mesh.glb
-  loadOnStartup: 1
+  loadOnStartup: 0
   sceneId: -1
   playAutomatically: 1
   streamingAsset: 0
@@ -295,6 +295,61 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &629600556
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 629600557}
+  - component: {fileID: 629600558}
+  m_Layer: 0
+  m_Name: model_handler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &629600557
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 629600556}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.9042995, y: 1.233721, z: -1.117891}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &629600558
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 629600556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4f018ccc88d4425cae4c16850a4c893, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hostUrl: https://tencent-hunyuan3d-2.hf.space
+  apiEndPoint: /call/generation_all
+  textPrompt: 
+  imageUrl: https://raw.githubusercontent.com/vivekselvaraj/test-images/refs/heads/main/chair-png.png
+  inferenceStep: 20
+  guidanceScale: 3
+  seed: 0
+  octreeResolution: 256
+  removeBackground: 1
+  responseCutoffTime: 100
+  glbLoader: {fileID: 183574163}
 --- !u!1 &1143654708
 GameObject:
   m_ObjectHideFlags: 0
@@ -440,3 +495,4 @@ SceneRoots:
   - {fileID: 1143654711}
   - {fileID: 254736245}
   - {fileID: 183574162}
+  - {fileID: 629600557}

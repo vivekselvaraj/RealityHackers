@@ -1,3 +1,7 @@
+# ignore secrets
+Secrets.json
+Secrets.json*
+
 # Created by https://www.toptal.com/developers/gitignore/api/unity,rider,jetbrains+all,visualstudiocode,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=unity,rider,jetbrains+all,visualstudiocode,macos
 
