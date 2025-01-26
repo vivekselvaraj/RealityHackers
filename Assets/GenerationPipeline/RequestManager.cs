@@ -18,7 +18,8 @@ public class RequestManager : MonoBehaviour
     public string accessKey = "access_key";
     public string secretKey = "secret_key";
     
-    public UnityEvent<string> onNewImageStatus = new(); 
+    public UnityEvent<string> onNewImageStatus = new();
+    public UnityEvent<string> onImageUploadComplete = new();
     
     [Header("Debug")]
     [SerializeField]
@@ -138,8 +139,9 @@ public class RequestManager : MonoBehaviour
         string signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(toSign)));
         
         // Build request
-        string url = $"https://mit.nyc3.digitaloceanspaces.com/{fileName}";
-        var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPUT);
+        string urlRoot = "https://mit.nyc3.digitaloceanspaces.com";
+        string finalUrl = $"{urlRoot}/{fileName}";
+        var request = new UnityWebRequest(finalUrl, UnityWebRequest.kHttpVerbPUT);
         request.uploadHandler = new UploadHandlerRaw(textureData);
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Host", $"mit.nyc3.digitaloceanspaces.com");
@@ -157,6 +159,7 @@ public class RequestManager : MonoBehaviour
         {
             Debug.Log("Upload successful!");
             onNewImageStatus?.Invoke("Upload successful!");
+            onImageUploadComplete?.Invoke(finalUrl);
         }
         else
         {
