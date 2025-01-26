@@ -34,7 +34,7 @@ namespace Anaglyph.DisplayCapture.Barcodes
 		{
 			barcodeReader.OnReadBarcodes += OnReadBarcodes;
 
-			Vector2Int size = DisplayCaptureManager.Instance.Size;
+			Vector2Int size = DisplayCaptureManager.Instance.TextureSize;
 			float aspect = size.x / (float)size.y;
 
 			displayCaptureProjection = Matrix4x4.Perspective(Fov, aspect, 1, 100f);
@@ -65,7 +65,7 @@ namespace Anaglyph.DisplayCapture.Barcodes
 				{
 					BarcodeReader.Point pixel = barcodeResult.points[i];
 
-					Vector2Int size = DisplayCaptureManager.Instance.Size;
+					Vector2Int size = DisplayCaptureManager.Instance.TextureSize;
 
 					Vector2 uv = new Vector2(pixel.x / size.x, 1f - pixel.y / size.y);
 					Vector3 worldPos = Unproject(displayCaptureProjection, uv);

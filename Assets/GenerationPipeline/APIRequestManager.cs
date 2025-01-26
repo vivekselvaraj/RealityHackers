@@ -128,9 +128,10 @@ public class APIRequestManager : MonoBehaviour {
                 }
 
                 var secondsLapsed = (Time.time - startTime);
+                secondsLapsed = Mathf.Round(secondsLapsed * 100f) / 100f; // Round to 2 decimal places
                 // Log the elapsed time periodically
                 Debug.Log($"Still waiting... Time elapsed: {secondsLapsed} seconds.");
-                OnConnectionStatusUpdate($"Heart: {secondsLapsed}");
+                OnConnectionStatusUpdate($"Generating: {secondsLapsed}");
 
                 // Wait for the specified delay before the next check
                 yield return new WaitForSeconds(delayBetweenChecks);

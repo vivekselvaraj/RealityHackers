@@ -51,7 +51,7 @@ public class GlbLoader : MonoBehaviour
         generatedObject.name = "GeneratedObject";
         generatedObject.transform.parent = parent;
         generatedObject.transform.localPosition = Vector3.zero;
-        generatedObject.transform.localEulerAngles = Vector3.zero;
+        generatedObject.transform.localEulerAngles = new Vector3(0f, 180f, 0f);
         var gltfAsset = generatedObject.AddComponent<GltfAsset>();
         gltfAsset.Url = remoteURL;
         generatedObject.transform.localScale = new Vector3(spawnScale, spawnScale, spawnScale);

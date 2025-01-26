@@ -14,7 +14,7 @@ namespace Anaglyph.DisplayCapture
 		public bool flipTextureOnGPU = false;
 
 		[SerializeField] private Vector2Int textureSize = new(1024, 1024);
-		public Vector2Int Size => textureSize;
+		public Vector2Int TextureSize => textureSize;
 
 		private Texture2D screenTexture;
 		public Texture2D ScreenCaptureTexture => screenTexture;
@@ -38,8 +38,13 @@ namespace Anaglyph.DisplayCapture
 		public bool isInitialFrameSkipped = false;
 		public bool screenCaptureStarted = false;
 		public bool isOneFrameCaptureRequested = false;
+		public bool isOneFrameUISkipRequested = false;
 		private Texture2D _oneFrameTexture;
 		public Texture2D OneFrameTexture => _oneFrameTexture;
+		
+		[Header("References")]
+		public RequestManager requestManager;
+		public GameObject uiFrameWrapper;
 
 		private class AndroidInterface
 		{
@@ -69,15 +74,15 @@ namespace Anaglyph.DisplayCapture
 		{
 			Instance = this;
 
-			androidInterface = new AndroidInterface(gameObject, Size.x, Size.y);
+			androidInterface = new AndroidInterface(gameObject, TextureSize.x, TextureSize.y);
 
-			screenTexture = new Texture2D(Size.x, Size.y, TextureFormat.RGBA32, 1, false);
-			_oneFrameTexture = new Texture2D(Size.x, Size.y, TextureFormat.RGBA32, 1, false);
+			screenTexture = new Texture2D(TextureSize.x, TextureSize.y, TextureFormat.RGBA32, 1, false);
+			_oneFrameTexture = new Texture2D(TextureSize.x, TextureSize.y, TextureFormat.RGBA32, 1, false);
 		}
 
 		private void Start()
 		{
-			flipTexture = new RenderTexture(Size.x, Size.y, 1, RenderTextureFormat.ARGB32, 1);
+			flipTexture = new RenderTexture(TextureSize.x, TextureSize.y, 1, RenderTextureFormat.ARGB32, 1);
 			flipTexture.Create();
 
 			// onTextureInitialized.Invoke(screenTexture);
@@ -87,7 +92,7 @@ namespace Anaglyph.DisplayCapture
 			{
 				StartScreenCapture();
 			}
-			bufferSize = Size.x * Size.y * 4; // RGBA_8888 format: 4 bytes per pixel
+			bufferSize = TextureSize.x * TextureSize.y * 4; // RGBA_8888 format: 4 bytes per pixel
 		}
 
 		public void StartScreenCapture()
@@ -98,6 +103,7 @@ namespace Anaglyph.DisplayCapture
 		public void RequestOneFrameCapture()
 		{
 			isOneFrameCaptureRequested = true;
+			isOneFrameUISkipRequested = true;
 
 			if (!screenCaptureStarted)
 			{
@@ -113,6 +119,12 @@ namespace Anaglyph.DisplayCapture
 		private void ResetOneFrameOrder()
 		{
 			isOneFrameCaptureRequested = false;
+			ToggleUiLayers(true);
+		}
+
+		private void ToggleUiLayers(bool newState)
+		{
+			uiFrameWrapper.SetActive(newState);
 		}
 
 		// Messages sent from Android
@@ -134,21 +146,44 @@ namespace Anaglyph.DisplayCapture
 		private unsafe void OnNewFrameAvailable()
 		{
 			if (imageData == default) return;
+
+			if (isOneFrameCaptureRequested && requestManager.isUploadingBusy || requestManager.isGeneratingBusy)
+			{
+				ResetOneFrameOrder();
+				return;
+			}
+
+			if (isOneFrameCaptureRequested && isOneFrameUISkipRequested)
+			{
+				isOneFrameUISkipRequested = false;
+
+				ToggleUiLayers(false);
+				return;
+			}
+			
+			
 			
 			Texture2D textureToUse = isOneFrameCaptureRequested ? _oneFrameTexture : screenTexture;
 			
 			textureToUse.LoadRawTextureData((IntPtr)imageData, bufferSize);
 			textureToUse.Apply();
+			
 
 			if (flipTextureOnGPU)
 			{
 				Graphics.Blit(textureToUse, flipTexture, new Vector2(1, -1), Vector2.zero);
 				Graphics.CopyTexture(flipTexture, textureToUse);
 			}
-
+			
+			
+			// now crop the texture x4 times and keep only part in the middle only square in the middle
+			var croppedTexture = new Texture2D(textureToUse.width / 3, textureToUse.height / 3);
+			croppedTexture.SetPixels(textureToUse.GetPixels(textureToUse.width / 3, textureToUse.height / 3, croppedTexture.width, croppedTexture.height));
+			croppedTexture.Apply();
+			
 			if (isOneFrameCaptureRequested && isInitialFrameSkipped)
 			{
-				CompleteFrameCapture(textureToUse);
+				CompleteFrameCapture(croppedTexture);
 			}
 
 			ResetOneFrameOrder();
