@@ -34,6 +34,11 @@ public class RequestManager : MonoBehaviour
     public GameObject interactionBlock;
     public Transform referenceTransform;
     
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip camShot;
+    public AudioClip complete;
+    
     [Header("Cache (debug)")]
     public GameObject currentInteractionBlockWrapper;
     private void ToggleViewFinder(bool newState)
@@ -51,6 +56,13 @@ public class RequestManager : MonoBehaviour
     public void CompleteGenerationProcess()
     {
         ResetGeneratingProcess(false);
+        PlaySlightlyRandomAudio(complete);
+    }
+    
+    private void PlaySlightlyRandomAudio(AudioClip clipToPlay)
+    {
+        audioSource.pitch = UnityEngine.Random.Range(0.95f, 1.05f);
+        audioSource.PlayOneShot(clipToPlay);
     }
 
 
@@ -162,6 +174,7 @@ public class RequestManager : MonoBehaviour
         captureIsReady = true;
         
         if(isGeneratingBusy || isUploadingBusy) return;
+        PlaySlightlyRandomAudio(camShot);
         _textureCache = image;
         ToggleViewFinder(false);
     }

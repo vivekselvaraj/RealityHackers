@@ -175,11 +175,10 @@ namespace Anaglyph.DisplayCapture
 				Graphics.CopyTexture(flipTexture, textureToUse);
 			}
 			
-			
-			// now crop the texture x4 times and keep only part in the middle only square in the middle
 			var croppedTexture = new Texture2D(textureToUse.width / 3, textureToUse.height / 3);
 			croppedTexture.SetPixels(textureToUse.GetPixels(textureToUse.width / 3, textureToUse.height / 3, croppedTexture.width, croppedTexture.height));
 			croppedTexture.Apply();
+			
 			
 			if (isOneFrameCaptureRequested && isInitialFrameSkipped)
 			{

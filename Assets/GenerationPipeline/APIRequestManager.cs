@@ -127,7 +127,8 @@ public class APIRequestManager : MonoBehaviour {
                     yield break;
                 }
 
-                var secondsLapsed = (Time.time - startTime);
+                var secondsLapsed = 0f;
+                secondsLapsed = (Time.time - startTime);
                 secondsLapsed = Mathf.Round(secondsLapsed * 100f) / 100f; // Round to 2 decimal places
                 // Log the elapsed time periodically
                 Debug.Log($"Still waiting... Time elapsed: {secondsLapsed} seconds.");
@@ -142,7 +143,10 @@ public class APIRequestManager : MonoBehaviour {
             {
                 string responseText = request.downloadHandler.text;
                 if (responseText.Contains("complete")) {
-                    OnConnectionStatusUpdate("Generation complete.");
+                    var secondsLapsed = 0f;
+                    secondsLapsed = (Time.time - startTime);
+                    secondsLapsed = Mathf.Round(secondsLapsed * 100f) / 100f; // Round to 2 decimal places
+                    OnConnectionStatusUpdate($"Generation done. {secondsLapsed} sec");
                     string glbUrl = $"{hostUrl}/static/{eventId}/textured_mesh.glb";
                     Debug.Log(glbUrl);
                     glbLoader.LoadRemoteGLBToSceneWithURL(glbUrl);
