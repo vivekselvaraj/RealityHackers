@@ -28,11 +28,13 @@ namespace Anaglyph.DisplayCapture
 		public UnityEvent onPermissionDenied = new();
 		public UnityEvent onStopped = new();
 		public UnityEvent onNewFrame = new();
+		public UnityEvent<Texture2D> onFrameCaptured = new();
 
 		private unsafe sbyte* imageData;
 		private int bufferSize;
 		
 		[Header("Debug")]
+		public bool isInitialFrameSkipped = false;
 		public bool screenCaptureStarted = false;
 		public bool isOneFrameCaptureRequested = false;
 		private Texture2D _oneFrameTexture;
@@ -136,9 +138,6 @@ namespace Anaglyph.DisplayCapture
 			
 			textureToUse.LoadRawTextureData((IntPtr)imageData, bufferSize);
 			textureToUse.Apply();
-			
-			// converted to PNG
-			var bytes = textureToUse.EncodeToPNG();
 
 			if (flipTextureOnGPU)
 			{
@@ -146,9 +145,29 @@ namespace Anaglyph.DisplayCapture
 				Graphics.CopyTexture(flipTexture, textureToUse);
 			}
 
-			ResetOneFrameOrder();
+			if (isOneFrameCaptureRequested && isInitialFrameSkipped)
+			{
+				CompleteFrameCapture(textureToUse);
+			}
 
-			// onNewFrame.Invoke();
+			ResetOneFrameOrder();
+			isInitialFrameSkipped = true;
+		}
+
+		private void CompleteFrameCapture(Texture2D capturedFrame)
+		{
+			onFrameCaptured?.Invoke(FlipTexture(capturedFrame));
+		}
+		
+		Texture2D FlipTexture(Texture2D source)
+		{
+			Texture2D flipped = new Texture2D(source.width, source.height);
+			for (int y = 0; y < source.height; y++)
+			{
+				flipped.SetPixels(0, source.height - 1 - y, source.width, 1, source.GetPixels(0, y, source.width, 1));
+			}
+			flipped.Apply();
+			return flipped;
 		}
 
 		private void OnCaptureStopped()
@@ -156,6 +175,7 @@ namespace Anaglyph.DisplayCapture
 			ResetOneFrameOrder();
 			onStopped.Invoke();
 			screenCaptureStarted = false;
+			isInitialFrameSkipped = false;
 		}
 #pragma warning restore IDE0051 // Remove unused private members
 	}
