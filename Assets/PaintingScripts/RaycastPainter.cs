@@ -1,23 +1,57 @@
 using UnityEngine;
 
+[RequireComponent(typeof(LineRenderer))]
 public class RaycastPainter : MonoBehaviour
 {
-    
-    // TODO: To be attached to an empty game object
-    // TODO: convert the input get mouse button to controller trigger
-    
-    public Color sprayColor = Color.red; // The color to spray
+    public Color[] sprayColors = { Color.red, Color.blue, Color.green }; // Set of colors to rotate
     public float sprayRadius = 0.05f; // Spray radius in UV space (0 to 1)
     public int sprayDensity = 100; // Number of paint particles per spray
 
+    public OVRInput.Controller controller = OVRInput.Controller.RTouch; // Default to the right-hand controller
+
+    private LineRenderer lineRenderer; // LineRenderer to visualize the ray
+    private Color defaultColor; // Lighter version of sprayColor for always-on ray
+    private int currentColorIndex = 0; // Index of the current color in sprayColors
+
+    void Start()
+    {
+        // Initialize the LineRenderer
+        lineRenderer = GetComponent<LineRenderer>();
+        lineRenderer.positionCount = 2; // A line requires two points
+        lineRenderer.startWidth = 0.01f; // Adjust the line width as needed
+        lineRenderer.endWidth = 0.01f;
+        lineRenderer.material = new Material(Shader.Find("Sprites/Default")); // Simple material
+
+        // Set the initial spray color and default color
+        UpdateSprayColor();
+    }
+
     void Update()
     {
-        if (Input.GetMouseButton(0)) // Detect if the left mouse button is held down
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        HandleThumbstickInput();
 
-            if (Physics.Raycast(ray, out RaycastHit hit))
+        // Get the controller's position and rotation
+        Vector3 controllerPosition = OVRInput.GetLocalControllerPosition(controller);
+        Quaternion controllerRotation = OVRInput.GetLocalControllerRotation(controller);
+
+        // Create a ray from the controller's position in its forward direction
+        Ray ray = new Ray(controllerPosition, controllerRotation * Vector3.forward);
+
+        // Set the start of the line to the controller's position
+        lineRenderer.SetPosition(0, controllerPosition);
+
+        if (Physics.Raycast(ray, out RaycastHit hit))
+        {
+            // Set the end of the line to the hit position
+            lineRenderer.SetPosition(1, hit.point);
+
+            // Check if the trigger button is pressed
+            if (OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
             {
+                // Use the full spray color when the trigger is pressed
+                lineRenderer.startColor = sprayColors[currentColorIndex];
+                lineRenderer.endColor = sprayColors[currentColorIndex];
+
                 // Check if the hit object has an OverlayTextureCreator component
                 OverlayTextureCreator overlayCreator = hit.collider.GetComponent<OverlayTextureCreator>();
 
@@ -40,29 +74,63 @@ public class RaycastPainter : MonoBehaviour
                     }
                 }
             }
+            else
+            {
+                // Revert to the lighter default color when the trigger is not pressed
+                lineRenderer.startColor = defaultColor;
+                lineRenderer.endColor = defaultColor;
+            }
         }
+        else
+        {
+            // Set the end of the line to a point far along the ray direction
+            lineRenderer.SetPosition(1, ray.origin + ray.direction * 10f);
+
+            // Ensure the color reflects the trigger state
+            if (!OVRInput.Get(OVRInput.RawButton.RIndexTrigger))
+            {
+                lineRenderer.startColor = defaultColor;
+                lineRenderer.endColor = defaultColor;
+            }
+        }
+    }
+
+    private void HandleThumbstickInput()
+    {
+        // Check for thumbstick left press
+        if (OVRInput.GetDown(OVRInput.RawButton.RThumbstickLeft))
+        {
+            currentColorIndex = (currentColorIndex - 1 + sprayColors.Length) % sprayColors.Length;
+            UpdateSprayColor();
+        }
+
+        // Check for thumbstick right press
+        if (OVRInput.GetDown(OVRInput.RawButton.RThumbstickRight))
+        {
+            currentColorIndex = (currentColorIndex + 1) % sprayColors.Length;
+            UpdateSprayColor();
+        }
+    }
+
+    private void UpdateSprayColor()
+    {
+        // Update the spray color and the lighter default color
+        defaultColor = new Color(sprayColors[currentColorIndex].r, sprayColors[currentColorIndex].g, sprayColors[currentColorIndex].b, 0.3f);
     }
 
     private void ApplySpray(Texture2D texture, Vector2 centerUV)
     {
         for (int i = 0; i < sprayDensity; i++)
         {
-            // Generate a random point within the spray radius
             Vector2 randomOffset = Random.insideUnitCircle * sprayRadius;
-
-            // Calculate the UV position
             Vector2 uv = centerUV + randomOffset;
-
-            // Convert UV to pixel positions
             int pixelX = (int)(uv.x * texture.width);
             int pixelY = (int)(uv.y * texture.height);
 
-            // Check bounds to prevent accessing pixels outside the texture
             if (pixelX >= 0 && pixelX < texture.width && pixelY >= 0 && pixelY < texture.height)
             {
-                // Blend the spray color with the existing pixel color
                 Color existingColor = texture.GetPixel(pixelX, pixelY);
-                Color blendedColor = Color.Lerp(existingColor, sprayColor, 0.5f); // Adjust blend strength as needed
+                Color blendedColor = Color.Lerp(existingColor, sprayColors[currentColorIndex], 0.5f);
                 texture.SetPixel(pixelX, pixelY, blendedColor);
             }
         }
@@ -70,7 +138,6 @@ public class RaycastPainter : MonoBehaviour
 
     private Vector2 NormalizeUV(Vector2 uv)
     {
-        // Ensure UV coordinates are in the range [0, 1]
         return new Vector2(uv.x - Mathf.Floor(uv.x), uv.y - Mathf.Floor(uv.y));
     }
 }
