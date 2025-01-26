@@ -29,6 +29,7 @@ namespace Anaglyph.DisplayCapture
 		public UnityEvent onStopped = new();
 		public UnityEvent onNewFrame = new();
 		public UnityEvent<Texture2D> onFrameCaptured = new();
+		public UnityEvent<Texture2D> onFrameReseted = new();
 
 		private unsafe sbyte* imageData;
 		private int bufferSize;
@@ -157,6 +158,11 @@ namespace Anaglyph.DisplayCapture
 		private void CompleteFrameCapture(Texture2D capturedFrame)
 		{
 			onFrameCaptured?.Invoke(FlipTexture(capturedFrame));
+		}
+
+		public void ResetFrameCapture()
+		{
+			onFrameReseted?.Invoke(_oneFrameTexture);
 		}
 		
 		Texture2D FlipTexture(Texture2D source)

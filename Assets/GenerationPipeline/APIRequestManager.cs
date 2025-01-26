@@ -21,6 +21,8 @@ public class APIRequestManager : MonoBehaviour {
     public string hfToken = "secret_token";
     
     public UnityEvent<string> onConnectionStatusUpdate = new();
+    public UnityEvent onGenerationProcessStopped = new();
+    public UnityEvent onGenerationProcessCompleted = new();
 
     
     [Header("References")]
@@ -71,7 +73,7 @@ public class APIRequestManager : MonoBehaviour {
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
 
-        OnConnectionStatusUpdate("Rquesting generation...");
+        OnConnectionStatusUpdate("Requesting generation...");
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success)
@@ -86,12 +88,15 @@ public class APIRequestManager : MonoBehaviour {
             }
             else
             {
+                onGenerationProcessStopped?.Invoke();
                 Debug.LogError("Failed to extract event_id from the response.");
             }
         }
         else
         {
+            onGenerationProcessStopped?.Invoke();
             Debug.LogError("Request failed: " + request.error);
+            OnConnectionStatusUpdate("Request failed...");
         }
     }
 
@@ -118,6 +123,7 @@ public class APIRequestManager : MonoBehaviour {
                     OnConnectionStatusUpdate("Generation timed out.");
                     Debug.LogError("Long connection timed out after " + responseCutoffTime + " seconds.");
                     request.Abort(); // Kill the connection
+                    onGenerationProcessStopped?.Invoke();
                     yield break;
                 }
 
@@ -139,15 +145,17 @@ public class APIRequestManager : MonoBehaviour {
                     string glbUrl = $"{hostUrl}/static/{eventId}/textured_mesh.glb";
                     Debug.Log(glbUrl);
                     glbLoader.LoadRemoteGLBToSceneWithURL(glbUrl);
-                    
+                    onGenerationProcessCompleted?.Invoke();
                 }
                 else {
+                    onGenerationProcessStopped?.Invoke();
                     OnConnectionStatusUpdate("meh.");
                     Debug.Log(responseText);
                 }
             }
             else
             {
+                onGenerationProcessStopped?.Invoke();
                 OnConnectionStatusUpdate("Generation err.");
                 Debug.LogError("Request failed: " + request.error);
             }
