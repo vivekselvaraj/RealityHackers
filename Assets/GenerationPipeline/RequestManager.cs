@@ -18,11 +18,56 @@ public class RequestManager : MonoBehaviour
     public string accessKey = "access_key";
     public string secretKey = "secret_key";
     
-    public UnityEvent<string> onNewImageStatus = new(); 
+    public UnityEvent<string> onNewImageStatus = new();
+    public UnityEvent<string> onImageUploadComplete = new();
     
     [Header("Debug")]
     [SerializeField]
     private Texture2D _textureCache;
+    public bool captureIsReady = false;
+    public bool isUploadingBusy = false;
+    public bool isGeneratingBusy = false;
+    
+    [Header("Mode management")]
+    public GameObject viewFinder;
+    public GameObject previewPanel;
+    public GameObject interactionBlock;
+    public Transform referenceTransform;
+    
+    [Header("Cache (debug)")]
+    public GameObject currentInteractionBlockWrapper;
+    private void ToggleViewFinder(bool newState)
+    {
+        viewFinder.SetActive(newState);
+        previewPanel.SetActive(!newState);
+    }
+
+    public void StopGenerationProcess()
+    {
+        ClearInsideCurrentInteractionBlockLocally();
+        ResetGeneratingProcess();
+    }
+    
+    public void CompleteGenerationProcess()
+    {
+        ResetGeneratingProcess(false);
+    }
+
+
+    private void ClearInsideCurrentInteractionBlockLocally()
+    {
+        ClearInsideCurrentInteractionBlockWrapper();
+    }
+
+    public void ClearInsideCurrentInteractionBlockWrapper()
+    {
+        if(currentInteractionBlockWrapper == null) return;
+        
+        foreach (Transform child in currentInteractionBlockWrapper.transform)
+        {
+            Destroy(child.gameObject);
+        }
+    }
     
     // context button in menu "send test upload"
     [ContextMenu("Send Test Upload")]
@@ -40,7 +85,8 @@ public class RequestManager : MonoBehaviour
         testTexture.SetPixels(colors);
         testTexture.Apply();
         
-        UploadImageToTheCloud(testTexture);
+        CacheAndPrepareCapture(testTexture);
+        UploadTextureToServer();
     }
     
     public event Action<string> OnLocalSavingComplete;
@@ -111,16 +157,64 @@ public class RequestManager : MonoBehaviour
         }
     }
 
-    public void UploadImageToTheCloud(Texture2D image)
+    public void CacheAndPrepareCapture(Texture2D image)
     {
-        // var bytes = image.EncodeToPNG();
+        captureIsReady = true;
+        
+        if(isGeneratingBusy || isUploadingBusy) return;
         _textureCache = image;
+        ToggleViewFinder(false);
+    }
+
+    public void ResetCapture()
+    {
+        _textureCache = null;
+        captureIsReady = false;
+
+        CheckIfViewFinderMustEnable();
+    }
+
+    private void CheckIfViewFinderMustEnable()
+    {
+        if (!isGeneratingBusy && !isUploadingBusy)
+        {
+            ToggleViewFinder(true);
+        }
+    }
+
+    public void UploadTextureToServer()
+    {
+        if (_textureCache == null || !captureIsReady)
+        {
+            Debug.LogError("No texture to upload or capture is not ready!");
+            return;
+        }
+
+        if (isGeneratingBusy)
+        {
+            Debug.LogWarning("Generation is already in progress!");
+            return;
+        }
+
+        if (isUploadingBusy)
+        {
+            Debug.LogWarning("Upload is already in progress!");
+            return;
+        }
         
         StartCoroutine(StartUploadingTexture());
     }
 
     IEnumerator StartUploadingTexture()
     {
+        isUploadingBusy = true;
+
+        // global up rotation SetupPreviewImage
+        var generatingObjectPrefab = Instantiate(interactionBlock, referenceTransform.position, Quaternion.identity);
+        var interactionInnerProvider = generatingObjectPrefab.GetComponent<InnerTransformProvider>();
+        currentInteractionBlockWrapper = interactionInnerProvider.innerTransform.gameObject;
+        interactionInnerProvider.SetupPreviewImage(_textureCache);
+        
         byte[] textureData = _textureCache.EncodeToPNG();
         
         var randomId = Guid.NewGuid().ToString();
@@ -138,8 +232,9 @@ public class RequestManager : MonoBehaviour
         string signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(toSign)));
         
         // Build request
-        string url = $"https://mit.nyc3.digitaloceanspaces.com/{fileName}";
-        var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPUT);
+        string urlRoot = "https://mit.nyc3.digitaloceanspaces.com";
+        string finalUrl = $"{urlRoot}/{fileName}";
+        var request = new UnityWebRequest(finalUrl, UnityWebRequest.kHttpVerbPUT);
         request.uploadHandler = new UploadHandlerRaw(textureData);
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Host", $"mit.nyc3.digitaloceanspaces.com");
@@ -157,11 +252,32 @@ public class RequestManager : MonoBehaviour
         {
             Debug.Log("Upload successful!");
             onNewImageStatus?.Invoke("Upload successful!");
+            onImageUploadComplete?.Invoke(finalUrl);
+            isGeneratingBusy = true;
+            ResetUploadingProcess();
         }
         else
         {
+            ResetUploadingProcess();
             Debug.LogError("Upload failed: " + request.error);
             onNewImageStatus?.Invoke("Upload error!");
+        }
+    }
+
+    private void ResetUploadingProcess()
+    {
+        isUploadingBusy = false;
+        CheckIfViewFinderMustEnable();
+    }
+    
+    private void ResetGeneratingProcess(bool isFinderEnableNeeded = true)
+    {
+        isGeneratingBusy = false;
+        currentInteractionBlockWrapper = null;
+
+        if (isFinderEnableNeeded)
+        {
+            CheckIfViewFinderMustEnable();
         }
     }
 }
