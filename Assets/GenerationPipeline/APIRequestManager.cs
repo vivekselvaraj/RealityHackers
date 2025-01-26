@@ -27,14 +27,20 @@ public class APIRequestManager : MonoBehaviour {
     private void Start()
     {
         _secrets = SecretManager.GetSecrets();
-        if (_secrets != null)
-        {
-            StartCoroutine(SendPostRequest());
-        }
-        else
-        {
-            Debug.LogError("Secrets not found. Ensure API keys are configured.");
-        }
+        // if (_secrets != null)
+        // {
+        //     StartCoroutine(SendPostRequest());
+        // }
+        // else
+        // {
+        //     Debug.LogError("Secrets not found. Ensure API keys are configured.");
+        // }
+    }
+
+    public void RequestModelGeneration(string referenceImageUrl)
+    {
+        imageUrl = referenceImageUrl;
+        StartCoroutine(SendPostRequest());
     }
 
     private IEnumerator SendPostRequest()
